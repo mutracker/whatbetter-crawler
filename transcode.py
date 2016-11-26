@@ -1,18 +1,18 @@
 #!/usr/bin/env python
-import errno
-import multiprocessing
-import os
-import pipes
-import re
-import shlex
-import shutil
-import signal
-import subprocess
-import sys
-
-import mutagen.flac
-
-import tagging
+import os                                                                                                                                                                                                                         
+import re                                                                                                                                                                                                                         
+import sys                                                                                                                                                                                                                        
+import errno                                                                                                                                                                                                                      
+import pipes                                                                                                                                                                                                                      
+import shlex                                                                                                                                                                                                                      
+import shutil                                                                                                                                                                                                                     
+import signal                                                                                                                                                                                                                     
+import fnmatch                                                                                                                                                                                                                    
+import tempfile                                                                                                                                                                                                                   
+import subprocess                                                                                                                                                                                                                 
+import multiprocessing                                                                                                                                                                                                            
+import mutagen.flac                                                                                                                                                                                                               
+import tagging 
 
 encoders = {
     '320':  {'enc': 'lame', 'ext': '.mp3',  'opts': '-h -b 320 --ignore-tag-errors'},
@@ -343,6 +343,7 @@ def make_torrent(input_dir, output_dir, tracker, passkey):
         'passkey' : passkey,
     }
     command = ["mktorrent", "-p", "-a", tracker_url, "-o", torrent, input_dir]
+#    command = ["~/bin/mktor", "-p", "-X", "PTH", "-o", torrent, input_dir, "pth"]
     subprocess.check_output(command, stderr=subprocess.STDOUT)
     return torrent
 

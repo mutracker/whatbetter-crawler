@@ -6,7 +6,7 @@ import ConfigParser
 import json
 import argparse
 
-from whatapi import WhatAPI
+from pthapi import PthAPI
 
 
 def main():
@@ -31,12 +31,12 @@ def main():
         print "please run whatbetter once"
         sys.exit(2)
 
-    username = config.get('whatcd', 'username')
-    password = config.get('whatcd', 'password')
-    torrent_dir = os.path.expanduser(config.get('whatcd', 'torrent_dir'))
+    username = config.get('pthme', 'username')
+    password = config.get('pthme', 'password')
+    torrent_dir = os.path.expanduser(config.get('pthme', 'torrent_dir'))
 
     print 'Logging in to What.CD...'
-    api = WhatAPI(username, password)
+    api = PthAPI(username, password)
 
     try:
         cache = json.load(open(args.cache))

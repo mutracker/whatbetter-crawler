@@ -67,7 +67,7 @@ class LoginException(Exception):
 class RequestException(Exception):
     pass
 
-class WhatAPI:
+class PthAPI:
     def __init__(self, username=None, password=None):
         self.session = requests.Session()
         self.session.headers.update(headers)
@@ -76,14 +76,14 @@ class WhatAPI:
         self.authkey = None
         self.passkey = None
         self.userid = None
-        self.tracker = "http://tracker.what.cd:34000/"
+        self.tracker = "https://please.passtheheadphones.me/"
         self.last_request = time.time()
         self.rate_limit = 2.0 # seconds between requests
         self._login()
 
     def _login(self):
         '''Logs in user and gets authkey from server'''
-        loginpage = 'https://what.cd/login.php'
+        loginpage = 'https://passtheheadphones.me/login.php'
         data = {'username': self.username,
                 'password': self.password}
         r = self.session.post(loginpage, data=data)
@@ -95,14 +95,14 @@ class WhatAPI:
         self.userid = accountinfo['id']
 
     def logout(self):
-        self.session.get("https://what.cd/logout.php?auth=%s" % self.authkey)
+        self.session.get("https://passtheheadphones.me/logout.php?auth=%s" % self.authkey)
 
     def request(self, action, **kwargs):
         '''Makes an AJAX request at a given action page'''
         while time.time() - self.last_request < self.rate_limit:
             time.sleep(0.1)
 
-        ajaxpage = 'https://what.cd/ajax.php'
+        ajaxpage = 'https://passtheheadphones.me/ajax.php'
         params = {'action': action}
         if self.authkey:
             params['auth'] = self.authkey
@@ -116,17 +116,6 @@ class WhatAPI:
             return parsed['response']
         except ValueError:
             raise RequestException
-
-    def request_html(self, action, **kwargs):
-        while time.time() - self.last_request < self.rate_limit:
-            time.sleep(0.1)
-
-        ajaxpage = 'https://what.cd/' + action
-        if self.authkey:
-            kwargs['auth'] = self.authkey
-        r = self.session.get(ajaxpage, params=kwargs, allow_redirects=False)
-        self.last_request = time.time()
-        return r.content
     
     def get_artist(self, id=None, format='MP3', best_seeded=True):
         res = self.request('artist', id=id)
@@ -164,7 +153,7 @@ class WhatAPI:
         else:
             media_params = ['&media=%s' % media_search_map[m] for m in media]
 
-        url = 'https://what.cd/torrents.php?type=snatched&userid=%s&format=FLAC' % self.userid
+        url = 'https://passtheheadphones.me/torrents.php?type=snatched&userid=%s&format=FLAC' % self.userid
         for mp in media_params:
             page = 1
             done = False
@@ -178,7 +167,7 @@ class WhatAPI:
                 page += 1
 
     def upload(self, group, torrent, new_torrent, format, description=[]):
-        url = "https://what.cd/upload.php?groupid=%s" % group['group']['id']
+        url = "https://passtheheadphones.me/upload.php?groupid=%s" % group['group']['id']
         response = self.session.get(url)
         forms = mechanize.ParseFile(StringIO(response.text.encode('utf-8')), url)
         form = forms[-1]
@@ -202,7 +191,7 @@ class WhatAPI:
         return self.session.post(url, data=data, headers=dict(headers))
 
     def set_24bit(self, torrent):
-        url = "https://what.cd/torrents.php?action=edit&id=%s" % torrent['id']
+        url = "https://passtheheadphones.me/torrents.php?action=edit&id=%s" % torrent['id']
         response = self.session.get(url)
         forms = mechanize.ParseFile(StringIO(response.text.encode('utf-8')), url)
         form = forms[-3]
@@ -211,42 +200,10 @@ class WhatAPI:
         return self.session.post(url, data=data, headers=dict(headers))
 
     def release_url(self, group, torrent):
-        return "https://what.cd/torrents.php?id=%s&torrentid=%s#torrent%s" % (group['group']['id'], torrent['id'], torrent['id'])
+        return "https://passtheheadphones.me/torrents.php?id=%s&torrentid=%s#torrent%s" % (group['group']['id'], torrent['id'], torrent['id'])
 
     def permalink(self, torrent):
-        return "https://what.cd/torrents.php?torrentid=%s" % torrent['id']
-
-    def get_better(self, type=3):
-        p = re.compile(ur'(torrents\.php\?action=download&(?:amp;)?id=(\d+)[^"]*).*(torrents\.php\?id=\d+(?:&amp;|&)torrentid=\2\#torrent\d+)', re.DOTALL)
-        out = []
-        data = self.request_html('better.php', method='transcode', type=type)
-        for torrent, id, perma in p.findall(data):
-            out.append({
-                'permalink': perma.replace('&amp;', '&'),
-                'id': int(id),
-                'torrent': torrent.replace('&amp;', '&'),
-            })
-        return out
-
-    def get_torrent(self, torrent_id):
-        '''Downloads the torrent at torrent_id using the authkey and passkey'''
-        while time.time() - self.last_request < self.rate_limit:
-            time.sleep(0.1)
-
-        torrentpage = 'https://ssl.what.cd/torrents.php'
-        params = {'action': 'download', 'id': torrent_id}
-        if self.authkey:
-            params['authkey'] = self.authkey
-            params['torrent_pass'] = self.passkey
-        r = self.session.get(torrentpage, params=params, allow_redirects=False)
-
-        self.last_request = time.time() + 2.0
-        if r.status_code == 200 and 'application/x-bittorrent' in r.headers['content-type']:
-            return r.content
-        return None
-
-    def get_torrent_info(self, id):
-        return self.request('torrent', id=id)['torrent']
+        return "https://passtheheadphones.me/torrents.php?torrentid=%s" % torrent['id']
 
 def unescape(text):
     return HTMLParser.HTMLParser().unescape(text)

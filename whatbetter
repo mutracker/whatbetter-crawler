@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import ConfigParser
 import argparse
 import cPickle as pickle
@@ -11,7 +11,7 @@ from multiprocessing import cpu_count
 
 import tagging
 import transcode
-import whatapi
+import pthapi
 from _version import __version__
 
 
@@ -33,7 +33,7 @@ def create_description(torrent, flac_dir, format, permalink):
         '',
         '[code]%s[/code]' % ' | '.join(cmds),
         '',
-        banner()
+        #banner()
         ]
     return description
 
@@ -46,9 +46,9 @@ def formats_needed(group, torrent, supported_formats):
 
     others = filter(same_group, group['torrents'])
     current_formats = set((t['format'], t['encoding']) for t in others)
-    missing_formats = [format for format, details in [(f, whatapi.formats[f]) for f in supported_formats]\
+    missing_formats = [format for format, details in [(f, pthapi.formats[f]) for f in supported_formats]\
                            if (details['format'], details['encoding']) not in current_formats]
-    allowed_formats = whatapi.allowed_transcodes(torrent)
+    allowed_formats = pthapi.allowed_transcodes(torrent)
     return [format for format in missing_formats if format in allowed_formats]
 
 def main():
@@ -74,49 +74,49 @@ def main():
     except:
         if not os.path.exists(os.path.dirname(args.config)):
             os.makedirs(os.path.dirname(args.config))
-        config.add_section('whatcd')
-        config.set('whatcd', 'username', '')
-        config.set('whatcd', 'password', '')
-        config.set('whatcd', 'data_dir', '')
-        config.set('whatcd', 'output_dir', '')
-        config.set('whatcd', 'torrent_dir', '')
-        config.set('whatcd', 'formats', 'flac, v0, 320, v2')
-        config.set('whatcd', 'media', ', '.join(whatapi.lossless_media))
-        config.set('whatcd', '24bit_behaviour','0')
+        config.add_section('passtheheadphones')
+        config.set('passtheheadphones', 'username', '')
+        config.set('passtheheadphones', 'password', '')
+        config.set('passtheheadphones', 'data_dir', '')
+        config.set('passtheheadphones', 'output_dir', '')
+        config.set('passtheheadphones', 'torrent_dir', '')
+        config.set('passtheheadphones', 'formats', 'flac, v0, 320, v2')
+        config.set('passtheheadphones', 'media', ', '.join(pthapi.lossless_media))
+        config.set('passtheheadphones', '24bit_behaviour','0')
         config.write(open(args.config, 'w'))
         print 'Please edit the configuration file: %s' % args.config
         sys.exit(2)
     finally:
-        username = config.get('whatcd', 'username')
-        password = config.get('whatcd', 'password')
-        do_24_bit = config.get('whatcd', '24bit_behaviour')
-        data_dir = os.path.expanduser(config.get('whatcd', 'data_dir'))
+        username = config.get('passtheheadphones', 'username')
+        password = config.get('passtheheadphones', 'password')
+        do_24_bit = config.get('passtheheadphones', '24bit_behaviour')
+        data_dir = os.path.expanduser(config.get('passtheheadphones', 'data_dir'))
         try:
-            output_dir = os.path.expanduser(config.get('whatcd', 'output_dir'))
+            output_dir = os.path.expanduser(config.get('passtheheadphones', 'output_dir'))
         except ConfigParser.NoOptionError:
             output_dir = None
         if not output_dir:
             output_dir = data_dir
-        torrent_dir = os.path.expanduser(config.get('whatcd', 'torrent_dir'))
-        supported_formats = [format.strip().upper() for format in config.get('whatcd', 'formats').split(',')]
+        torrent_dir = os.path.expanduser(config.get('passtheheadphones', 'torrent_dir'))
+        supported_formats = [format.strip().upper() for format in config.get('passtheheadphones', 'formats').split(',')]
 
         try:
-            media_config = config.get('whatcd', 'media')
+            media_config = config.get('passtheheadphones', 'media')
             if not media_config:
-                supported_media = whatapi.lossless_media
+                supported_media = pthapi.lossless_media
             else:
                 supported_media = set([medium.strip().lower() for medium in media_config.split(',')])
-                if not supported_media.issubset(set(whatapi.lossless_media)):
-                    print 'Unsupported media type "%s", edit your configuration' % (supported_media - whatapi.lossless_media).pop()
-                    print 'Supported types are:', ', '.join(whatapi.lossless_media)
+                if not supported_media.issubset(set(pthapi.lossless_media)):
+                    print 'Unsupported media type "%s", edit your configuration' % (supported_media - pthapi.lossless_media).pop()
+                    print 'Supported types are:', ', '.join(pthapi.lossless_media)
                     sys.exit(2)
         except ConfigParser.NoOptionError:
-            supported_media = whatapi.lossless_media
+            supported_media = pthapi.lossless_media
 
     upload_torrent = not args.no_upload
 
     print 'Logging in to What.CD...'
-    api = whatapi.WhatAPI(username, password)
+    api = pthapi.PthAPI(username, password)
 
     try:
         seen = pickle.load(open(args.cache))
@@ -136,25 +136,21 @@ def main():
         group = api.request('torrentgroup', id=groupid)
         torrent = [t for t in group['torrents'] if t['id'] == torrentid][0]
 
-        release = "Release found: %s (%s)" % (whatapi.unescape(group['group']['name']), group['group']['year'])
-        releaseurl = "Release URL: %s" % api.release_url(group, torrent)
-        
         print
-        print release.encode("utf-8")
-        print releaseurl.encode("utf-8")
+        print "Release found: %s (%s)" % (pthapi.unescape(group['group']['name']), group['group']['year'])
+        print "Release URL: %s" % api.release_url(group, torrent)
 
         if not torrent['filePath']:
-            flac_file = os.path.join(data_dir, whatapi.unescape(torrent['fileList']).split('{{{')[0])
+            flac_file = os.path.join(data_dir, pthapi.unescape(torrent['fileList']).split('{{{')[0])
             if not os.path.exists(flac_file):
                 print "Path not found - skipping: %s" % flac_file
                 continue
-            flac_dir = os.path.join(data_dir, "%s (%s) [FLAC]" % (
-            whatapi.unescape(group['group']['name']), group['group']['year']))
+            flac_dir = os.path.join(data_dir, "%s (%s) [FLAC]" % (pthapi.unescape(group['group']['name']), group['group']['year']))
             if not os.path.exists(flac_dir):
                 os.makedirs(flac_dir)
             shutil.copy(flac_file, flac_dir)
         else:
-            flac_dir = os.path.join(data_dir, whatapi.unescape(torrent['filePath']))
+            flac_dir = os.path.join(data_dir, pthapi.unescape(torrent['filePath']))
 
         flac_dir = flac_dir.encode(sys.getfilesystemencoding())
         if int(do_24_bit):
